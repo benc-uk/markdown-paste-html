@@ -5,19 +5,19 @@ A lightweight Windows utility that runs in the background and converts markdown 
 ## Features
 
 - 🚀 **Background Service**: Runs silently in the system tray
-- ⌨️ **Global Hotkey**: Press `Ctrl+Shift+B` to convert and paste
+- ⌨️ **Global Hotkey**: Press `Ctrl+Shift+M` (configurable) to convert and paste
 - 📋 **Smart Conversion**: Converts plain text markdown to rich HTML
 - 🎯 **Auto-Paste**: Automatically pastes the converted content
 - 🔔 **Toast Notifications**: Non-intrusive feedback for errors
 - 🔄 **Multi-Format Clipboard**: Outputs HTML and plain text for maximum compatibility
-- 🌟 **System Tray Integration**: Enable/disable hotkey, toggle auto-start
+- 🌟 **System Tray Integration**: Enable/disable hotkey, change shortcut, toggle auto-start
 - 🏁 **Auto-Start Support**: Optionally start with Windows
 
 ## How It Works
 
 1. Copy markdown text to clipboard (e.g., `# Hello **world**`)
 2. Position cursor where you want to paste
-3. Press `Ctrl+Shift+B`
+3. Press `Ctrl+Shift+M` (or your configured shortcut)
 4. The utility converts markdown → HTML and automatically pastes the rich formatted text
 
 ## Usage Example
@@ -73,6 +73,7 @@ The executable will be in: `bin/Release/net8.0-windows10.0.19041.0/win-x64/publi
 Right-click the tray icon to access:
 
 - **✓ Hotkey Enabled** - Toggle hotkey on/off
+- **Change Shortcut...** - Set a custom hotkey combination
 - **Start with Windows** - Enable/disable auto-start
 - **About** - View application info
 - **Exit** - Close the application
@@ -88,6 +89,8 @@ Settings are automatically saved to:
 Contains:
 
 - `HotkeyEnabled`: Whether the hotkey is active
+- `HotkeyModifiers`: Modifier keys bitmask (Ctrl=2, Alt=1, Shift=4)
+- `HotkeyKey`: Virtual key code for the hotkey
 - `AutoStartEnabled`: Whether to start with Windows
 
 ## Supported Markdown
@@ -111,7 +114,8 @@ The utility uses Markdig with advanced extensions and supports:
 
 ### Hotkey Not Working
 
-- Check if another application is using `Ctrl+Shift+B`
+- Check if another application is using the same shortcut
+- Try changing the shortcut via the tray menu
 - Try toggling the hotkey off and on in the tray menu
 - Restart the application
 
