@@ -15,15 +15,10 @@ public class GlobalHotkey : IDisposable
   private const int WM_HOTKEY = 0x0312;
   private const int HOTKEY_ID = 1;
 
-  // Modifier keys
-  private const uint MOD_CONTROL = 0x0002;
-  private const uint MOD_SHIFT = 0x0004;
-
-  // Virtual key code for 'B'
-  private const uint VK_B = 0x42;
-
   private readonly MessageWindow _messageWindow;
   private bool _isRegistered = false;
+  private uint _modifiers;
+  private uint _key;
 
   public event EventHandler? HotkeyPressed;
 
@@ -32,17 +27,19 @@ public class GlobalHotkey : IDisposable
     _messageWindow = new MessageWindow(this);
   }
 
-  public bool Register()
+  public bool Register(uint modifiers, uint key)
   {
-    if (_isRegistered)
-      return true;
+    // Unregister any existing hotkey first
+    Unregister();
 
-    // Register Ctrl+Shift+B
+    _modifiers = modifiers;
+    _key = key;
+
     _isRegistered = RegisterHotKey(
         _messageWindow.Handle,
         HOTKEY_ID,
-        MOD_CONTROL | MOD_SHIFT,
-        VK_B);
+        _modifiers,
+        _key);
 
     return _isRegistered;
   }

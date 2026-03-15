@@ -86,7 +86,7 @@ public class AutoPaster
       return false;
     }
 
-    // Wait for user to release all modifier keys from the hotkey (Ctrl+Shift+B)
+    // Wait for user to release all modifier keys from the hotkey (Ctrl+Shift+M)
     // If we send Ctrl+V while user still holds Ctrl+Shift, it becomes Ctrl+Shift+V = paste plain text
     int maxWait = 2000; // 2 second max
     int waited = 0;

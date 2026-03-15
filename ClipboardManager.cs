@@ -50,10 +50,8 @@ public class ClipboardManager
     {
       if (OpenClipboard(IntPtr.Zero))
         return true;
-      Logger.Log($"OpenClipboard attempt {i + 1} failed (err={Marshal.GetLastWin32Error()}), retrying...");
       System.Threading.Thread.Sleep(delayMs);
     }
-    Logger.LogError($"OpenClipboard failed after {maxRetries} attempts");
     return false;
   }
 
@@ -64,7 +62,6 @@ public class ClipboardManager
     {
       if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
       {
-        Logger.Log("GetText: CF_UNICODETEXT not available on clipboard");
         return null;
       }
 
@@ -76,21 +73,18 @@ public class ClipboardManager
         IntPtr hData = GetClipboardData(CF_UNICODETEXT);
         if (hData == IntPtr.Zero)
         {
-          Logger.Log("GetText: GetClipboardData returned null");
           return null;
         }
 
         IntPtr pData = GlobalLock(hData);
         if (pData == IntPtr.Zero)
         {
-          Logger.Log("GetText: GlobalLock returned null");
           return null;
         }
 
         try
         {
           string text = Marshal.PtrToStringUni(pData) ?? "";
-          Logger.Log($"GetText: Read {text.Length} chars from clipboard");
           return string.IsNullOrEmpty(text) ? null : text;
         }
         finally
@@ -103,9 +97,9 @@ public class ClipboardManager
         CloseClipboard();
       }
     }
-    catch (Exception ex)
+    catch
     {
-      Logger.LogError("Failed to get clipboard text", ex);
+      // Failed to get clipboard text
     }
 
     return null;
@@ -115,20 +109,15 @@ public class ClipboardManager
   {
     try
     {
-      Logger.Log($"SetMultiFormat called with HTML length: {html.Length}");
-
       // Build the CF_HTML clipboard format string
       string htmlClipboard = BuildHtmlClipboard(html);
-      Logger.Log($"HTML clipboard (first 300 chars): {htmlClipboard.Substring(0, Math.Min(300, htmlClipboard.Length))}");
 
       // Register the HTML Format clipboard format
       uint cfHtml = RegisterClipboardFormatW("HTML Format");
       if (cfHtml == 0)
       {
-        Logger.LogError($"RegisterClipboardFormat failed: {Marshal.GetLastWin32Error()}");
         return false;
       }
-      Logger.Log($"Registered HTML Format as clipboard format ID: {cfHtml}");
 
       // Open clipboard with retry (another process may briefly hold it)
       if (!TryOpenClipboard())
@@ -149,7 +138,6 @@ public class ClipboardManager
           GlobalUnlock(hHtml);
 
           IntPtr result = SetClipboardData(cfHtml, hHtml);
-          Logger.Log($"SetClipboardData HTML Format: {(result != IntPtr.Zero ? "SUCCESS" : $"FAILED err={Marshal.GetLastWin32Error()}")}");
         }
 
         // 2) Set CF_UNICODETEXT - plain text fallback (UTF-16)
@@ -164,20 +152,17 @@ public class ClipboardManager
           GlobalUnlock(hText);
 
           IntPtr result = SetClipboardData(CF_UNICODETEXT, hText);
-          Logger.Log($"SetClipboardData CF_UNICODETEXT: {(result != IntPtr.Zero ? "SUCCESS" : $"FAILED err={Marshal.GetLastWin32Error()}")}");
         }
       }
       finally
       {
         CloseClipboard();
-        Logger.Log("Clipboard closed");
       }
 
       return true;
     }
-    catch (Exception ex)
+    catch
     {
-      Logger.LogError("Failed to set clipboard", ex);
       return false;
     }
   }
@@ -208,8 +193,6 @@ public class ClipboardManager
                    $"StartFragment:{startFragmentPos:D10}\r\n" +
                    $"EndFragment:{endFragmentPos:D10}\r\n" +
                    fullHtml;
-
-    Logger.Log($"BuildHtmlClipboard: startHTML={startHtmlPos}, endHTML={endHtmlPos}, startFrag={startFragmentPos}, endFrag={endFragmentPos}");
 
     return result;
   }

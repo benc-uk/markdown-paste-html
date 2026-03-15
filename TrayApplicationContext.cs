@@ -18,11 +18,10 @@ public class TrayApplicationContext : ApplicationContext
 
   private ToolStripMenuItem? _enableDisableMenuItem;
   private ToolStripMenuItem? _autoStartMenuItem;
+  private ToolStripMenuItem? _changeShortcutMenuItem;
 
   public TrayApplicationContext()
   {
-    Logger.Log("Application starting...");
-
     // Initialize services
     _clipboardManager = new ClipboardManager();
     _markdownConverter = new MarkdownConverter();
@@ -30,8 +29,6 @@ public class TrayApplicationContext : ApplicationContext
     _notificationService = new NotificationService();
     _autoStartManager = new AutoStartManager();
     _settings = Settings.Load();
-
-    Logger.Log($"Settings loaded: HotkeyEnabled={_settings.HotkeyEnabled}, AutoStartEnabled={_settings.AutoStartEnabled}");
 
     // Initialize global hotkey
     _globalHotkey = new GlobalHotkey();
@@ -41,7 +38,7 @@ public class TrayApplicationContext : ApplicationContext
     _trayIcon = new NotifyIcon
     {
       Icon = CreateIcon(),
-      Text = "Markdown Paste HTML\nCtrl+Shift+B to convert and paste",
+      Text = $"Markdown Paste HTML\n{_settings.HotkeyDisplayString} to convert and paste",
       Visible = true,
       ContextMenuStrip = CreateContextMenu()
     };
@@ -49,12 +46,7 @@ public class TrayApplicationContext : ApplicationContext
     // Register hotkey if enabled
     if (_settings.HotkeyEnabled)
     {
-      Logger.Log("Registering hotkey...");
       RegisterHotkey();
-    }
-    else
-    {
-      Logger.Log("Hotkey disabled in settings");
     }
 
     // Sync auto-start setting
@@ -87,6 +79,9 @@ public class TrayApplicationContext : ApplicationContext
     _enableDisableMenuItem = new ToolStripMenuItem("Enable Hotkey", null, OnToggleHotkey);
     menu.Items.Add(_enableDisableMenuItem);
 
+    _changeShortcutMenuItem = new ToolStripMenuItem("Change Shortcut...", null, OnChangeShortcut);
+    menu.Items.Add(_changeShortcutMenuItem);
+
     menu.Items.Add(new ToolStripSeparator());
 
     _autoStartMenuItem = new ToolStripMenuItem("Start with Windows", null, OnToggleAutoStart);
@@ -94,8 +89,6 @@ public class TrayApplicationContext : ApplicationContext
 
     menu.Items.Add(new ToolStripSeparator());
 
-    menu.Items.Add(new ToolStripMenuItem("Test Conversion (Manual)", null, OnTestConversion));
-    menu.Items.Add(new ToolStripMenuItem("View Log File", null, OnViewLog));
     menu.Items.Add(new ToolStripMenuItem("About", null, OnAbout));
     menu.Items.Add(new ToolStripMenuItem("Exit", null, OnExit));
 
@@ -117,34 +110,21 @@ public class TrayApplicationContext : ApplicationContext
 
   private void RegisterHotkey()
   {
-    Logger.Log("Attempting to register Ctrl+Shift+B hotkey...");
-    bool success = _globalHotkey.Register();
+    bool success = _globalHotkey.Register(_settings.HotkeyModifiers, _settings.HotkeyKey);
 
     if (!success)
     {
-      Logger.LogError("Hotkey registration failed");
       MessageBox.Show(
-          "Could not register Ctrl+Shift+B hotkey.\n\n" +
-          "It may be in use by another application, or hotkey registration may not work in this environment (WSL).\n\n" +
-          $"Check log file at: {Logger.GetLogPath()}",
+          $"Could not register {_settings.HotkeyDisplayString} hotkey.\n\n" +
+          "It may be in use by another application, or hotkey registration may not work in this environment (WSL).",
           "Hotkey Registration Failed",
           MessageBoxButtons.OK,
           MessageBoxIcon.Warning);
     }
-    else
-    {
-      Logger.Log("Hotkey registered successfully");
-    }
-  }
-
-  private async void OnTestConversion(object? sender, EventArgs e)
-  {
-    await PerformConversionAndPaste();
   }
 
   private async void OnHotkeyPressed(object? sender, EventArgs e)
   {
-    Logger.Log("Hotkey pressed!");
     await PerformConversionAndPaste();
   }
 
@@ -152,26 +132,19 @@ public class TrayApplicationContext : ApplicationContext
   {
     try
     {
-      Logger.Log("Starting conversion process...");
-
       // Get clipboard text
       string? clipboardText = _clipboardManager.GetText();
-      Logger.Log($"Clipboard text retrieved: {(clipboardText != null ? clipboardText.Length + " chars" : "null")}");
 
       if (string.IsNullOrWhiteSpace(clipboardText))
       {
-        Logger.Log("Clipboard is empty");
         _notificationService.ShowWarning(
             "Clipboard Empty",
             "No text found in clipboard.");
         return;
       }
 
-      Logger.Log($"First 100 chars: {clipboardText.Substring(0, Math.Min(100, clipboardText.Length))}");
-
       // Check if it looks like markdown
       bool isMarkdown = _markdownConverter.IsLikelyMarkdown(clipboardText);
-      Logger.Log($"Is likely markdown: {isMarkdown}");
 
       if (!isMarkdown)
       {
@@ -182,27 +155,19 @@ public class TrayApplicationContext : ApplicationContext
       }
 
       // Convert markdown to HTML
-      Logger.Log("Converting markdown to HTML...");
       string html = _markdownConverter.ConvertToHtml(clipboardText);
-      Logger.Log($"HTML generated: {html.Length} chars");
 
       // Set clipboard with HTML and plain text formats
-      Logger.Log("Setting clipboard with multiple formats...");
       bool clipboardSet = _clipboardManager.SetMultiFormat(clipboardText, html, null);
 
       if (!clipboardSet)
       {
-        Logger.LogError("Failed to set clipboard - aborting paste");
         _notificationService.ShowWarning("Clipboard Error", "Could not write to clipboard. Try again.");
         return;
       }
-      Logger.Log("Clipboard updated successfully");
 
       // Auto-paste
-      Logger.Log("Attempting to paste...");
-
       bool pasteSuccess = await _autoPaster.PasteAsync();
-      Logger.Log($"Paste success: {pasteSuccess}");
 
       if (!pasteSuccess)
       {
@@ -213,12 +178,8 @@ public class TrayApplicationContext : ApplicationContext
     }
     catch (Exception ex)
     {
-      Logger.LogError("Exception during conversion", ex);
-
-      string errorMsg = $"Error: {ex.Message}\n\nLog file: {Logger.GetLogPath()}";
-
       MessageBox.Show(
-          errorMsg,
+          $"Error: {ex.Message}",
           "Conversion Failed",
           MessageBoxButtons.OK,
           MessageBoxIcon.Error);
@@ -265,42 +226,37 @@ public class TrayApplicationContext : ApplicationContext
     UpdateMenuItems();
   }
 
-
-  private void OnViewLog(object? sender, EventArgs e)
+  private void OnChangeShortcut(object? sender, EventArgs e)
   {
-    try
+    using var dialog = new HotkeyPickerDialog(_settings.HotkeyModifiers, _settings.HotkeyKey);
+    if (dialog.ShowDialog() == DialogResult.OK)
     {
-      string logPath = Logger.GetLogPath();
-      if (File.Exists(logPath))
+      _globalHotkey.Unregister();
+
+      _settings.HotkeyModifiers = dialog.ResultModifiers;
+      _settings.HotkeyKey = dialog.ResultKey;
+      _settings.Save();
+
+      if (_settings.HotkeyEnabled)
       {
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-        {
-          FileName = logPath,
-          UseShellExecute = true
-        });
+        RegisterHotkey();
       }
-      else
-      {
-        MessageBox.Show($"Log file not found at:\n{logPath}", "No Log File", MessageBoxButtons.OK, MessageBoxIcon.Information);
-      }
-    }
-    catch (Exception ex)
-    {
-      MessageBox.Show($"Error opening log: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+      _trayIcon.Text = $"Markdown Paste HTML\n{_settings.HotkeyDisplayString} to convert and paste";
     }
   }
+
 
   private void OnAbout(object? sender, EventArgs e)
   {
     MessageBox.Show(
         "Markdown Paste HTML v1.0\n\n" +
         "Converts markdown in clipboard to HTML and auto-pastes.\n\n" +
-        "Hotkey: Ctrl+Shift+B\n\n" +
+        $"Hotkey: {_settings.HotkeyDisplayString}\n\n" +
         "Usage:\n" +
         "1. Copy markdown text\n" +
-        "2. Press Ctrl+Shift+B\n" +
-        "3. Content is converted and pasted automatically\n\n" +
-        $"Log file: {Logger.GetLogPath()}",
+        $"2. Press {_settings.HotkeyDisplayString}\n" +
+        "3. Content is converted and pasted automatically",
         "About Markdown Paste HTML",
         MessageBoxButtons.OK,
         MessageBoxIcon.Information);
