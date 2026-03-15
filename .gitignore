@@ -1,0 +1,57 @@
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+*.vsidx
+*.vspscc
+*.vssscc
+
+# ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Application settings (optional - uncomment if you want to ignore user settings)
+# settings.json
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Test results
+TestResults/
+
+# Publish profiles
+*.pubxml
+*.azurePubxml
+
+# Package files
+*.nuget.props
+*.nuget.targets
+
+# Others
+project.lock.json
+project.fragment.lock.json
+artifacts/
