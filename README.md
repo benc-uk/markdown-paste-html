@@ -1,17 +1,18 @@
 # Markdown Paste HTML
 
-A lightweight Windows utility that runs in the background and converts markdown text from the clipboard into rich HTML/RTF format for pasting into any application.
+A lightweight Windows utility that runs in the background and converts markdown text from the clipboard into rich HTML format for pasting into any application. Written in Go, compiles to a single native `.exe` with zero runtime dependencies.
 
 ## Features
 
-- 🚀 **Background Service**: Runs silently in the system tray
-- ⌨️ **Global Hotkey**: Press `Ctrl+Shift+M` (configurable) to convert and paste
-- 📋 **Smart Conversion**: Converts plain text markdown to rich HTML
-- 🎯 **Auto-Paste**: Automatically pastes the converted content
-- 🔔 **Toast Notifications**: Non-intrusive feedback for errors
-- 🔄 **Multi-Format Clipboard**: Outputs HTML and plain text for maximum compatibility
-- 🌟 **System Tray Integration**: Enable/disable hotkey, change shortcut, toggle auto-start
-- 🏁 **Auto-Start Support**: Optionally start with Windows
+- **Background Service**: Runs silently in the system tray
+- **Global Hotkey**: Press `Ctrl+Shift+M` (configurable) to convert and paste
+- **Smart Conversion**: Converts plain text markdown to rich HTML
+- **Auto-Paste**: Automatically pastes the converted content
+- **Balloon Notifications**: Non-intrusive feedback for errors and warnings
+- **Multi-Format Clipboard**: Outputs HTML and plain text for maximum compatibility
+- **System Tray Integration**: Enable/disable hotkey, change shortcut, toggle auto-start
+- **Auto-Start Support**: Optionally start with Windows
+- **Single Binary**: ~5MB standalone `.exe`, no runtime or DLLs required
 
 ## How It Works
 
@@ -45,27 +46,22 @@ This is **bold** and this is _italic_.
 
 ### Prerequisites
 
-- .NET 8 SDK or later
-- Windows 10 (version 1809) or later
+- Go 1.21 or later
+- Windows 10 (version 1809) or later (target OS)
+- Cross-compilation from Linux/macOS is supported
 
-### Build Debug Version
+### Build
 
 ```bash
-dotnet build
+GOOS=windows GOARCH=amd64 go build -ldflags="-H windowsgui -s -w" -o MarkdownPasteHtml.exe .
 ```
 
-### Build Release (Single-File Executable)
+The `-H windowsgui` flag hides the console window. The `-s -w` flags strip debug info for a smaller binary.
 
-```bash
-dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishReadyToRun=true
-```
+On Windows you can omit the `GOOS`/`GOARCH` prefixes:
 
-The executable will be in: `bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/MarkdownPasteHtml.exe`
-
-### Run from WSL
-
-```bash
-./bin/Debug/net8.0-windows10.0.19041.0/win-x64/MarkdownPasteHtml.exe
+```powershell
+go build -ldflags="-H windowsgui -s -w" -o MarkdownPasteHtml.exe .
 ```
 
 ## System Tray Menu
@@ -95,7 +91,7 @@ Contains:
 
 ## Supported Markdown
 
-The utility uses Markdig with advanced extensions and supports:
+The utility uses [Goldmark](https://github.com/yuin/goldmark) with extensions and supports:
 
 - Headers (`#`, `##`, etc.)
 - Bold (`**text**` or `__text__`)
